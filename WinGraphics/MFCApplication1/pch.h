@@ -9,5 +9,13 @@
 
 // add headers that you want to pre-compile here
 #include "framework.h"
+#include<gdiplus.h>
+#pragma comment(lib, "gdiplus")
+using namespace Gdiplus;
+
+void DebugMsg_W(const WCHAR* format, ...);
+void DebugMsg(const char* format, ...);
+#define DEBUGM() DebugMsg("%s[%d]\n", __FILE__, __LINE__)
+#define DEBUGN( n ) DebugMsg("%s[%d]" #n " = %d\n", __FILE__, __LINE__, n)
 
 #endif //PCH_H

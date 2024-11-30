@@ -3,7 +3,6 @@
 // Used by MFCApplication1.rc
 //
 #define IDD_ABOUTBOX				100
-#define IDP_OLE_INIT_FAILED			100
 #define IDR_MAINFRAME				128
 #define IDR_MFCApplication1TYPE				130
 

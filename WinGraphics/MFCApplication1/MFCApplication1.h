@@ -18,16 +18,16 @@ class CMFCApplication1App : public CWinApp
 {
 public:
 	CMFCApplication1App() noexcept;
-
+	ULONG_PTR gdiplusToken;
 
 // Overrides
 public:
 	virtual BOOL InitInstance();
-	virtual int ExitInstance();
 
 // Implementation
 	afx_msg void OnAppAbout();
 	DECLARE_MESSAGE_MAP()
+	virtual int ExitInstance();
 };
 
 extern CMFCApplication1App theApp;

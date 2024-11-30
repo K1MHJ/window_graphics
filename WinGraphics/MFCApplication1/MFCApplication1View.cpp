@@ -13,11 +13,9 @@
 #include "MFCApplication1Doc.h"
 #include "MFCApplication1View.h"
 
-static void ThreadFunc(CMFCApplication1View* view);
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+//#ifdef _DEBUG
+//#define new DEBUG_NEW
+//#endif
 
 
 // CMFCApplication1View
@@ -25,11 +23,14 @@ static void ThreadFunc(CMFCApplication1View* view);
 IMPLEMENT_DYNCREATE(CMFCApplication1View, CView)
 
 BEGIN_MESSAGE_MAP(CMFCApplication1View, CView)
-	// Standard printing commands
-	ON_COMMAND(ID_FILE_PRINT, &CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_DIRECT, &CView::OnFilePrint)
-	ON_COMMAND(ID_FILE_PRINT_PREVIEW, &CView::OnFilePrintPreview)
+	ON_WM_CREATE()
 	ON_WM_DESTROY()
+	ON_WM_SIZE()
+	ON_WM_MOUSEWHEEL()
+	ON_WM_LBUTTONDOWN()
+	ON_WM_LBUTTONUP()
+	ON_WM_MOUSEMOVE()
+	ON_WM_MOUSELEAVE()
 END_MESSAGE_MAP()
 
 // CMFCApplication1View construction/destruction
@@ -54,23 +55,28 @@ BOOL CMFCApplication1View::PreCreateWindow(CREATESTRUCT& cs)
 
 // CMFCApplication1View drawing
 
-
-// CMFCApplication1View printing
-
-BOOL CMFCApplication1View::OnPreparePrinting(CPrintInfo* pInfo)
+void CMFCApplication1View::OnDraw(CDC* pDC)
 {
-	// default preparation
-	return DoPreparePrinting(pInfo);
-}
+	CMFCApplication1Doc* pDoc = GetDocument();
+	ASSERT_VALID(pDoc);
+	if (!pDoc)
+		return;
 
-void CMFCApplication1View::OnBeginPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
-{
-	// TODO: add extra initialization before printing
-}
+	// TODO: add draw code for native data here
+	CRect rc;
+	GetClientRect(rc);
+	Gdiplus::Graphics g(pDC->GetSafeHdc());
 
-void CMFCApplication1View::OnEndPrinting(CDC* /*pDC*/, CPrintInfo* /*pInfo*/)
-{
-	// TODO: add cleanup after printing
+	Gdiplus::Rect newRect(0, 0, 
+		m_bitmap.get()->GetWidth(), m_bitmap.get()->GetHeight());
+
+	Gdiplus::Rect toZoom(0, 0, rc.Width(), rc.Height());
+
+	g.DrawImage(m_bitmap.get(),
+		toZoom,
+		m_viewrc.left, m_viewrc.top,
+		m_viewrc.Width(), m_viewrc.Height(),
+		Gdiplus::UnitPixel);
 }
 
 
@@ -98,72 +104,40 @@ CMFCApplication1Doc* CMFCApplication1View::GetDocument() const // non-debug vers
 // CMFCApplication1View message handlers
 
 
-void CMFCApplication1View::OnInitialUpdate()
+BOOL CMFCApplication1View::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext)
 {
-	CView::OnInitialUpdate();
-
 	// TODO: Add your specialized code here and/or call the base class
-	CDC* pDC;//通常のデバイスコンテキストを格納するポインタ
-	CBrush cBrush;//ブラシ
-	CBrush* pOldBrush;//ブラシのストック変数
+
+	return CView::Create(lpszClassName, lpszWindowName, dwStyle, rect, pParentWnd, nID, pContext);
+}
+
+
+int CMFCApplication1View::OnCreate(LPCREATESTRUCT lpCreateStruct)
+{
+	if (CView::OnCreate(lpCreateStruct) == -1)
+		return -1;
+
+	// TODO:  Add your specialized creation code here
+	m_viewrc.left = 0;
+	m_viewrc.top = 0;
+	m_viewrc.right = 0;
+	m_viewrc.bottom = 0;
+	m_bitmap = BitmapPtr(new Bitmap(1000, 1000));
+	Graphics* g = Graphics::FromImage(m_bitmap.get());
+	SolidBrush brush(Color(255, 150, 150, 150));
 	
-	pBitmap = new CBitmap();
-	pDC = GetDC();
-	dcMem.CreateCompatibleDC(pDC);
-	pBitmap->CreateCompatibleBitmap(pDC, 400, 400);
-	pOldBitmap = dcMem.SelectObject(pBitmap);
-	cBrush.CreateSolidBrush(RGB(255, 255, 255));
-	pOldBrush = dcMem.SelectObject(&cBrush);
-	dcMem.PatBlt(0, 0, 400, 400, PATCOPY);
-	dcMem.SelectObject(pOldBrush);
-	ReleaseDC(pDC);
-
-	//th1 = std::thread(ThreadFunc, this);
-}
-
-void CMFCApplication1View::OnDraw(CDC* pDC)
-{
-	CMFCApplication1Doc* pDoc = GetDocument();
-	ASSERT_VALID(pDoc);
-	if (!pDoc)
-		return;
-	// TODO: add draw code for native data here
-	CRect cClip; // 更新領域
-	int nResult; // 更新領域の取得状況
-	nResult = pDC->GetClipBox(&cClip);
-	if (nResult == ERROR || nResult == NULLREGION) 
-	{ 
-		return; 
+	int cellSize = 100;
+	int i, j,row;
+	row = 0;
+	i = 0;
+	for (;row < m_bitmap.get()->GetHeight();++i) {
+		j = (i % 2 == 0) ? 0 : cellSize;
+		for (;j<m_bitmap.get()->GetWidth();j+=2*cellSize) {
+			g->FillRectangle(&brush, j, row, cellSize, cellSize);
+		}
+		row += cellSize;
 	}
-	/*
-	pDC->BitBlt(cClip.left, cClip.top,
-		cClip.Width(), cClip.Height(),
-		&dcMem, cClip.left, cClip.top, SRCCOPY);
-	*/
-}
-
-void ThreadFunc(CMFCApplication1View* view)
-{
-	Sleep(1000);
-
-#if 1
-	CDC& mDC = view->dcMem;
-	CBrush brush1;
-	brush1.CreateSolidBrush(RGB(255, 255, 0));
-	CRect rc;
-	CBrush* oldbrush = (CBrush*)mDC.SelectObject(&brush1);
-	rc.left = 0;
-	rc.top = 100;
-	rc.right = 30;
-	rc.bottom = 30;
-	for (int i = 0; i < 5; i++) {
-		rc.MoveToX(i * 40);
-		mDC.Rectangle(rc);
-		view->Invalidate();
-		Sleep(100);
-	}
-	mDC.SelectObject(oldbrush);
-#endif
+	return 0;
 }
 
 
@@ -172,8 +146,83 @@ void CMFCApplication1View::OnDestroy()
 	CView::OnDestroy();
 
 	// TODO: Add your message handler code here
-	//th1.join();
-	dcMem.SelectObject(pOldBitmap);
-	pBitmap->DeleteObject();
-	dcMem.DeleteDC();
+	m_bitmap.reset();
+}
+
+
+void CMFCApplication1View::OnSize(UINT nType, int cx, int cy)
+{
+	CView::OnSize(nType, cx, cy);
+
+	// TODO: Add your message handler code here
+	if (m_viewrc.Width() == 0) {
+		m_viewrc.right = m_viewrc.left + cx;
+	}
+	if (m_viewrc.Height() == 0) {
+		m_viewrc.bottom = m_viewrc.top + cy;
+	}
+
+	double cr = (double)cx / cy;
+	double r = (double)m_viewrc.Width() / m_viewrc.Height();
+	if (cr > r) {
+		double new_width = cr * m_viewrc.Height();
+		double new_left = m_viewrc.CenterPoint().x - new_width / 2;
+		double new_right = m_viewrc.CenterPoint().x + new_width / 2;
+		m_viewrc.left = new_left;
+		m_viewrc.right = new_right;
+	}
+	else {
+		double new_height = m_viewrc.Width() / cr;
+		double new_top = m_viewrc.CenterPoint().y - new_height / 2;
+		double new_bottom = m_viewrc.CenterPoint().y + new_height / 2;
+		m_viewrc.top = new_top;
+		m_viewrc.bottom = new_bottom;
+	}
+}
+
+
+BOOL CMFCApplication1View::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
+{
+	// TODO: Add your message handler code here and/or call default
+	CRect _rc;
+	double scale = 0.001;
+	m_viewrc.CopyRect(&_rc);
+	m_viewrc.left -= scale * _rc.Width() * (zDelta > 0)?1:-1;
+	m_viewrc.right+= scale * _rc.Width() * (zDelta > 0)?1:-1;
+	m_viewrc.top -= scale * _rc.Height() * (zDelta > 0)?1:-1;
+	m_viewrc.bottom += scale * _rc.Height() * (zDelta > 0)?1:-1;
+	InvalidateRect(NULL, FALSE);
+	return CView::OnMouseWheel(nFlags, zDelta, pt);
+}
+
+
+void CMFCApplication1View::OnLButtonDown(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+
+	CView::OnLButtonDown(nFlags, point);
+}
+
+
+void CMFCApplication1View::OnLButtonUp(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+
+	CView::OnLButtonUp(nFlags, point);
+}
+
+
+void CMFCApplication1View::OnMouseMove(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+
+	CView::OnMouseMove(nFlags, point);
+}
+
+
+void CMFCApplication1View::OnMouseLeave()
+{
+	// TODO: Add your message handler code here and/or call default
+
+	CView::OnMouseLeave();
 }

@@ -45,7 +45,7 @@ BOOL CMFCApplication1Doc::OnNewDocument()
 
 	// TODO: add reinitialization code here
 	// (SDI documents will reuse this document)
-	//TRACE("NEW\n");
+
 	return TRUE;
 }
 

@@ -24,8 +24,6 @@ BEGIN_MESSAGE_MAP(CMFCApplication1App, CWinApp)
 	// Standard file based document commands
 	ON_COMMAND(ID_FILE_NEW, &CWinApp::OnFileNew)
 	ON_COMMAND(ID_FILE_OPEN, &CWinApp::OnFileOpen)
-	// Standard print setup command
-	ON_COMMAND(ID_FILE_PRINT_SETUP, &CWinApp::OnFilePrintSetup)
 END_MESSAGE_MAP()
 
 
@@ -33,15 +31,6 @@ END_MESSAGE_MAP()
 
 CMFCApplication1App::CMFCApplication1App() noexcept
 {
-
-	// support Restart Manager
-	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_ALL_ASPECTS;
-#ifdef _MANAGED
-	// If the application is built using Common Language Runtime support (/clr):
-	//     1) This additional setting is needed for Restart Manager support to work properly.
-	//     2) In your project, you must add a reference to System.Windows.Forms in order to build.
-	System::Windows::Forms::Application::SetUnhandledExceptionMode(System::Windows::Forms::UnhandledExceptionMode::ThrowException);
-#endif
 
 	// TODO: replace application ID string below with unique ID string; recommended
 	// format for string is CompanyName.ProductName.SubProduct.VersionInformation
@@ -60,27 +49,8 @@ CMFCApplication1App theApp;
 
 BOOL CMFCApplication1App::InitInstance()
 {
-	// InitCommonControlsEx() is required on Windows XP if an application
-	// manifest specifies use of ComCtl32.dll version 6 or later to enable
-	// visual styles.  Otherwise, any window creation will fail.
-	INITCOMMONCONTROLSEX InitCtrls;
-	InitCtrls.dwSize = sizeof(InitCtrls);
-	// Set this to include all the common control classes you want to use
-	// in your application.
-	InitCtrls.dwICC = ICC_WIN95_CLASSES;
-	InitCommonControlsEx(&InitCtrls);
-
 	CWinApp::InitInstance();
 
-
-	// Initialize OLE libraries
-	if (!AfxOleInit())
-	{
-		AfxMessageBox(IDP_OLE_INIT_FAILED);
-		return FALSE;
-	}
-
-	AfxEnableControlContainer();
 
 	EnableTaskbarInteraction(FALSE);
 
@@ -115,7 +85,11 @@ BOOL CMFCApplication1App::InitInstance()
 	CCommandLineInfo cmdInfo;
 	ParseCommandLine(cmdInfo);
 
-
+	GdiplusStartupInput gdiplusStartupInput;
+	if (::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL) != Ok)
+	{
+		AfxMessageBox(_T("ERROR : Failed to initialize GDI+ library!"));
+	}
 
 	// Dispatch commands specified on the command line.  Will return FALSE if
 	// app was launched with /RegServer, /Register, /Unregserver or /Unregister.
@@ -126,14 +100,6 @@ BOOL CMFCApplication1App::InitInstance()
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
 	return TRUE;
-}
-
-int CMFCApplication1App::ExitInstance()
-{
-	//TODO: handle additional resources you may have added
-	AfxOleTerm(FALSE);
-
-	return CWinApp::ExitInstance();
 }
 
 // CMFCApplication1App message handlers
@@ -182,3 +148,13 @@ void CMFCApplication1App::OnAppAbout()
 
 
 
+
+
+int CMFCApplication1App::ExitInstance()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	::GdiplusShutdown(gdiplusToken);
+
+
+	return CWinApp::ExitInstance();
+}
